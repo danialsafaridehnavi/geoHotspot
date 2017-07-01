@@ -1,27 +1,50 @@
+_ = require 'lodash'
 gulp = require 'gulp'
 browserify = require 'browserify'
 source = require 'vinyl-source-stream'
 coffee = require 'gulp-coffee'
 gutil = require 'gulp-util'
 sass = require 'gulp-sass'
-minifyCss = require 'gulp-minify-css'
 rename = require 'gulp-rename'
+del = require 'del'
+sh = require 'shelljs'
+fs = require 'fs'
+util = require 'util'
+concat = require 'gulp-concat'
+whitespace = require 'gulp-css-whitespace'
+rework = require 'gulp-rework'
+imprt = require 'rework-import'
+reworkNPM = require 'rework-npm'
+reworkBower = require 'rework-bower'
+vars = require 'rework-vars'
+calc = require 'rework-calc'
+merge = require 'streamqueue'
+templateCache = require 'gulp-angular-templatecache'
 
-paths = sass: ['./scss/**/*.scss']
+gulp.task 'default', ['css', 'coffee']
 
-gulp.task 'default', ['sass', 'coffee']
+gulp.task 'config', ->
+  params = _.pick process.env, 'ROOTURL', 'MAP_KEY', 'LAT', 'LNG', 'ZOOM', 'SCOPE'
+  fs.writeFileSync 'www/js/config.json', util.inspect(params)
 
-gulp.task 'sass', (done) ->
-  gulp.src('./scss/ionic.app.scss')
-    .pipe(sass())
-    .pipe(gulp.dest('./www/css/'))
-    .pipe(minifyCss({
-      keepSpecialComments: 0
-    }))
-    .pipe(rename({ extname: '.min.css' }))
-    .pipe(gulp.dest('./www/css/'))
-    
-gulp.task 'coffee', ->
+gulp.task 'cssAll', ->
+  gulp.src 'www/css/index.css'
+    .pipe rework reworkNPM shim: 'angular-toastr': 'dist/angular-toastr.css'
+    .pipe concat 'css.css'
+    .pipe gulp.dest 'www/css/'
+
+gulp.task 'scssAll', ->
+  gulp.src 'scss/ionic.app.scss'
+    .pipe sass()
+    .pipe concat 'scss.css'
+    .pipe gulp.dest 'www/css/'
+
+gulp.task 'css', ['cssAll', 'scssAll'], ->
+  gulp.src ['www/css/css.css', 'www/css/scss.css']
+    .pipe concat 'ionic.app.css'
+    .pipe gulp.dest 'www/css'
+
+gulp.task 'coffee', ['config', 'template'], ->
   browserify(entries: ['./www/js/index.coffee'])
     .transform('coffeeify')
     .transform('debowerify')
@@ -29,23 +52,32 @@ gulp.task 'coffee', ->
     .pipe(source('index.js'))
     .pipe(gulp.dest('./www/js/'))
 
-gulp.task 'watch', ->
-  gulp.watch(paths.sass, ['sass'])
+gulp.task 'template', ->
+  gulp.src 'www/templates/**/*.html'
+    .pipe templateCache root: 'templates', standalone: true
+    .pipe gulp.dest 'www/js'
 
-gulp.task 'install', ['git-check'], ->
-  bower.commands.install().on 'log', (data) ->
-    gutil.log('bower', gutil.colors.cyan(data.id), data.message)
-    
-gulp.task 'git-check', (done) ->
-  if (!sh.which('git'))
-    console.log(
-      '  ' + gutil.colors.red('Git is not installed.'),
-      '\n  Git, the version control system, is required to download Ionic.',
-      '\n  Download git here:', gutil.colors.cyan('http://git-scm.com/downloads') + '.',
-      '\n  Once git is installed, run \'' + gutil.colors.cyan('gulp install') + '\' again.'
-    )
-    process.exit(1)
-  done()
+gulp.task 'clean', ->
+  del [
+    'node_modules'
+    'www/lib'
+    'www/css/css.css'
+    'www/css/scss.css'
+    'www/css/ionic.app.css'
+    'www/css/ionic.app.min.css'
+  ]
 
-    
-    
+stream = require 'stream'
+class Indent extends stream.Writable
+  constructor: (opts = {objectMode: true, decodeStrings: false}) ->
+    super opts
+
+  _write: (file, encoding, cb) ->
+    name = file.history
+    sh.exec "sed 's/\t/  /g' < #{name} > /tmp/$$ && mv /tmp/$$ #{name}"
+    cb()
+
+gulp.task 'indent', ->
+  gulp
+    .src ['**/*.coffee', '!node_modules/**', '!www/lib/**']
+    .pipe new Indent()

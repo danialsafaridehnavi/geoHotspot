@@ -1,16 +1,22 @@
-<ion-view>
-	<ion-nav-buttons class="item-input-inset">
-	    <button class="button button-icon button-clear ion-navicon" menu-toggle="left">
-        </button>
-	    <h1 class='title'>Hotspot Coverage</h1>
-	</ion-nav-buttons>
-	<ion-content>
-		<ui-gmap-google-map center='map.center' zoom='map.zoom' options="options" bounds='map.bounds' events="map.events" control="map.control">
-			<ui-gmap-marker coords="marker.coords" options="marker.options" idkey="marker.id" events="marker.events"></ui-gmap-marker>
-			<ui-gmap-markers models="markers" coords="'self'" icon="'icon'">
-			<!--<ui-gmap-circle ng-repeat="c in circles track by c.id" center="c.center" stroke="c.stroke" fill="c.fill" radius="c.radius" visible="c.visible" geodesic="c.geodesic" editable="c.editable" events="c.events"></ui-gmap-circle>-->
-		</ui-gmap-google-map>	
-		<!--<ion-infinite-scroll ng-if="collection.state.skip < collection.state.count" on-infinite="loadMore()">	
-		</ion-infinite-scroll>-->
-	</ion-content>
-</ion-view>
+<ui-gmap-google-map 
+  center='map.center' 
+  zoom='map.zoom' 
+  events='map.events'
+  pan='true'>
+  <ui-gmap-window 
+    show="map.window.show"
+    coords="map.window.model"
+    options="map.window.options"
+    closeClick="map.window.close()"
+    <div>{{map.window.model.info()}}</div>
+  </ui-gmap-window>
+  <ui-gmap-markers 
+    models="collection.models"
+    coords="'self'"
+    control="map.markerControl"
+    events="map.markersEvents"
+    icon="'icon'"
+    options="'options'"
+    doCluster="true">
+  </ui-gmap-markers>
+</ui-gmap-google-map>

@@ -2,63 +2,37 @@
 
 	<ion-nav-buttons class="item-input-inset">
 	    <h1 class='title'>Wifi Hotspot</h1>
-	    <button class="button button-clear button-positive" ng-click="save()">OK</button>
+	    <button class="button button-clear button-positive" ng-if="validate()" ng-click="save()">OK</button>
 	</ion-nav-buttons>
 
 	<ion-content>
 		<ion-list>
-				<div class='row'>
-					<div class="col-md-4">
-						<span class="input-label" style='width:200px'>Name</span>
-					</div>
-					<div class="col-md-8">	
-						<label class="item item-input">
-							<input type="text" ng-model="model.name" required>
-						</label>
-					</div>	
-				</div>	
-				<div class='row'>
-					<div class="col-md-4">
-						<span class="input-label" style='width:200px'>Latitude</span>
-					</div>
-					<div class="col-md-8">	
-						<label class="item item-input">
-							<input type="text" ng-model="model.location.coordinates[1]" required>
-							<!--<input type="text" ng-keypress='controller.disableText()' ng-model="model.latitude" required>-->
-						</label>
-					</div>	
-				</div>	
-				<div class='row'>
-					<div class="col-md-4">
-						<span class="input-label" style='width:200px'>Longitude</span>
-					</div>
-					<div class="col-md-8">	
-						<label class="item item-input">
-							<input type="text" ng-model="model.location.coordinates[0]" required>
-						</label>
-					</div>	
-				</div>	
-     			<div class='row'>
-					<div class="col-md-4">
-						<span class="input-label" style='width:200px;'>Address</span>
-					</div>
-					<div class="col-md-8">	
-						<label class="item item-input">
-							<input type="text" ng-model="model.address" required>
-						</label>
-					</div>				
-				</div>			
-				<div class='row'>
-					<div class="col-md-4">
-						<span class="input-label" style='width:200px;'>Tags</span>
-					</div>
-					<div class="col-md-8">	
-						<label>
-							<tag-editor ng-model="tags" output="name" fetch='api/tag?name='></tag-editor>
-							<span class="log"></span>
-						</label>
-					</div>		
-				</div>
+			<ion-item>
+				<ion-label primary stacked class="ion-label-size">Name</ion-label>
+				<input type="text" ng-model="model.name" required>
+			</ion-item>	
+			<ion-item>
+				<ion-label primary stacked class="ion-label-size">Latitude</ion-label>
+				<input type="number" ng-readonly="readcoord" min="-90" max="90" step="any" ng-model="model.location.coordinates[1]" required>
+			</ion-item>
+			<ion-item>
+				<ion-label primary stacked style="font-size:12px">Longitude</ion-label>
+				<input type="number" ng-readonly="readcoord" min="-180" max="180" step="any" ng-model="model.location.coordinates[0]" required>
+			</ion-item>
+			
+			<ion-item>
+				<ion-label primary stacked class="ion-label-size">Address</ion-label>
+				<input type="text" ng-readonly="readonly" ng-model="model.address" required>
+			</ion-item>
+			<ion-item>
+				<ion-label primary stacked class="ion-label-size">Tags</ion-label>
+				<div>	
+					<label class="tag-label-width">
+						<tag-editor ng-model="tags" output="name" placeholder="Press space or enter to add a tag." fetch='api/tag?name='></tag-editor>
+						<span class="log"></span>
+					</label>
+				</div>		
+			</ion-item>
 		</ion-list>
 	</ion-content>
 	

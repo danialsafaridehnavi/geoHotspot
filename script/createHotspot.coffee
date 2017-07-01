@@ -1,42 +1,43 @@
 #!/usr/bin/coffee
 
 Sails = require 'sails'
-stream = require 'stream'
-Promise = require 'bluebird'
-_ = require 'lodash'
 lib = require './lib.coffee'
-csv = require 'csv-parser'
-errCount=0
+Promise = require 'bluebird'
+path = require 'path'
+_ = require 'lodash'
 
-class HotspotCreate extends stream.Transform
+if process.argv.length != 4
+  console.log "usage: node_modules/.bin/coffee script/createHotspot.coffee $PWD/test/data/data.json email"
+  process.exit 1
 
-	_transform: (data, encoding, cb) ->
-		tagsReady data.tags.split(",")
-			.then (tags) ->
-				data.tags = tags
-				data.location =
-					coordinates: [parseFloat(data.longitude), parseFloat(data.latitude)]
-					type: 'Point'
-				sails.models.hotspot.create(data)
-			.catch (err) ->
-				errCount++
-				sails.log.error "#{errCount}. #{err}"
-			.finally cb
-
-tagsReady = (tags) ->
-	Promise.all  _.map tags, (name) ->
-		sails.models.tag.findOrCreate name:name
+file = process.argv[2]
+tag = path.parse(file).name
+email = process.argv[3]
 
 lib.sailsReady
-	.then (sails) ->
-		new Promise (resolve, reject) ->
-			process.stdin
-				.pipe csv()
-				.pipe new HotspotCreate(writableObjectMode: true)
-				.on 'finish', ->
-					sails.log.info 'create data finish!'
-					resolve()
-				.pipe process.stdout
-	.finally ->
-		Sails.lower()
-		process.exit()
+  .then (sails) ->
+    newUser = email: email
+    newTag = name: tag
+    Promise
+      .all [
+        sails.models.user.findOrCreate newUser, newUser
+        sails.models.tag.findOrCreate newTag, newTag
+      ]
+      .then (res) ->
+        user = res[0]
+        data = require file
+        Promise
+          .map data, (loc) ->
+            name: loc.name
+            coordinates: [parseFloat(loc.lng), parseFloat(loc.lat)]
+            extra: loc.extra
+          .map (loc) ->
+            _.extend loc,
+              createdBy: email
+              tag: [tag]
+            sails.models.hotspot
+              .create loc
+              .then sails.log.debug
+  .catch console.log
+  .finally ->
+    Sails.lower()

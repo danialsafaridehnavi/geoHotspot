@@ -1,9 +1,13 @@
 <ion-side-menus enable-menu-with-back-views="true">
   <ion-side-menu-content>
-  	<ion-nav-bar class="bar-stable nav-title-slide-ios7">
-    </ion-nav-bar>
-    
-  	<ion-nav-view name="menuContent"></ion-nav-view>
+    <ion-header-bar class="bar-stable">
+      <button class="button button-icon button-clear ion-navicon" menu-toggle="left">
+      </button>
+      <h1 class="title">Hotspot</h1>
+    </ion-header-bar>
+    <ion-content scroll='false'>
+      <ion-nav-view name="menuContent"></ion-nav-view>
+    </ion-content>
   </ion-side-menu-content>
 
   <ion-side-menu side="left" ng-controller="MenuCtrl">
@@ -12,15 +16,6 @@
     </ion-header-bar>
     <ion-content>
       <ion-list>
-        <ion-item nav-clear menu-close href="#/hotspot">
-          Hotspot List
-        </ion-item>
-        <ion-item nav-clear menu-close href="#/map">
-          Hotspot Coverage
-        </ion-item>
-        <ion-item nav-clear menu-close ng-if="env.isNative()" ng-click="navigator.app.exitApp()">
-          Exit
-        </ion-item>
       </ion-list>
     </ion-content>
   </ion-side-menu>

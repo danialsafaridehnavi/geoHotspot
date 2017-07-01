@@ -1,20 +1,19 @@
-FROM node:4-slim
+FROM node:6
 
-WORKDIR /usr/src/app
+ENV VER=${VER:-master} \
+    REPO=https://github.com/twhtanghk/geoHotspot \
+    APP=/usr/src/app
 
-ADD https://github.com/ewnchui/geoHotspot/archive/master.tar.gz /tmp
+RUN apt-get update && \
+    apt-get install -y git && \
+    apt-get clean && \
+    git clone -b $VER $REPO $APP
 
-RUN apt-get update && \  
-	apt-get -y install git && \
-	apt-get clean && \
-	tar --strip-components=1 -xzf /tmp/master.tar.gz && \
-	rm /tmp/master.tar.gz && \ 
-	cd /usr/src/app && \
-	npm install bower -g && \
-	npm install coffee-script -g && \
-	npm install && \
-	bower install --allow-root && \
-	node_modules/.bin/gulp --prod=prod && \
-	ln -s /usr/local/bin/coffee /usr/bin/coffee 
+WORKDIR $APP
 
-ENTRYPOINT npm start --prod
+RUN npm install && \
+    node_modules/.bin/bower install --allow-root
+	
+EXPOSE 1337
+
+ENTRYPOINT ./entrypoint.sh

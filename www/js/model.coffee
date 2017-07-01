@@ -1,48 +1,67 @@
 env = require './env.coffee'
 require 'PageableAR'
-		
+
 angular.module 'starter.model', ['PageableAR']
-	
-	.factory 'model', (pageableAR, $filter) ->
 
-		class User extends pageableAR.Model
-			$idAttribute: 'username'
-			
-			$urlRoot: "api/user/"
-			
-			_me = null
-			
-			@me: ->
-				_me ?= new User username: 'me'
+  .factory 'resource', (pageableAR, $filter, $http) ->
 
-		class Tag extends pageableAR.Model
-			$idAttribute: 'id'
-			
-			$urlRoot: "api/tag/"
-		
-		class Hotspot extends pageableAR.Model
-			$idAttribute: 'id'
-			
-			$urlRoot: "api/hotspot/"	
-		
-		class HotspotList extends pageableAR.PageableCollection
-			model: Hotspot
-		
-			$urlRoot: "api/hotspot/"
-			
-		class geoHotspot extends pageableAR.Model
-			$idAttribute: '_id'
-			
-			$urlRoot: "api/hotspot/"	
-		
-		class MapList extends pageableAR.Collection
-			model: geoHotspot
-			
-			$urlRoot: "api/hotspot/search"
+    class User extends pageableAR.Model
+      $urlRoot: "api/user/"
 
-		User:		User
-		Tag:	Tag
-		Hotspot:	Hotspot
-		HotspotList:	HotspotList
-		MapList:	MapList
-		geoHotspot:	geoHotspot
+      _me = null
+
+      @me: ->
+        _me ?= new User username: 'me'
+
+    class Hotspot extends pageableAR.Model
+      $idAttribute: 'id'
+
+      $urlRoot: "api/hotspot/"
+
+      $parse: (data, opts) ->
+        tag = data.tag[0]?.name
+        ret = super(data, opts)
+        ret['latitude'] = ret['lat']
+        ret['longitude'] = ret['lng']
+        ret['options'] = {title: "#{ret['name']}", icon: "img/#{tag}.png"}
+        return ret
+
+      info: ->
+        ret = _.pick @, 'name'
+        ret = _.extend ret, @extra
+        JSON.stringify ret
+
+    class HotspotList extends pageableAR.PageableCollection
+      model: Hotspot
+
+      $urlRoot: "api/hotspot/"
+
+      # split loaded models into 2 sets {inside: [...], outside: [...]}
+      split: (bounds) ->
+        ret = _.groupBy @models, (hotspot) ->
+          loc = hotspot.coordinates
+          if bounds.contains new google.maps.LatLng loc[1], loc[0]
+            'inside'
+          else
+            'outside'
+        _.defaults ret, {inside: [], outside: []}
+
+      inside: (bounds) ->
+        @split(bounds).inside
+
+      outside: (bounds) ->
+        @split(bounds).outside
+
+    class Tag extends pageableAR.Model
+      $urlRoot: "api/tag/"
+
+    class TagList extends pageableAR.PageableCollection
+      model: Tag
+
+      $urlRoot = "api/tag/"
+
+    User: User
+    Hotspot: Hotspot
+    HotspotList: HotspotList
+    Tag: Tag
+    TagList: TagList

@@ -1,39 +1,23 @@
+_ = require 'lodash'
 passport = require 'passport'
 bearer = require 'passport-http-bearer'
-Promise = require 'promise'
 
-# check if oauth2 bearer is available
-verifyToken = (token) ->
-	oauth2 = sails.config.oauth2
-	
-	return new Promise (fulfill, reject) ->
-		sails.services.rest().get token, oauth2.verifyURL			
-			.then (res) -> 
-				# check required scope authorized or not
-				scope = res.body.scope.split(' ')	
+passport.use 'bearer', new bearer.Strategy {} , (token, done) ->
+  oauth2 = sails.config.oauth2
+  sails.services.oauth2
+    .verify oauth2.verifyUrl, oauth2.scope, token
+    .then (info) ->
+      sails.models.user
+        .findOrCreate _.pick(info.user, 'email')
+        .populateAll()
+    .then (user) ->
+      sails.log.debug user
+      done null, user
+    .catch (err) ->
+      sails.log.debug err
+      done null, false, message: err
 
-				result = _.intersection scope, oauth2.scope
-				if result.length != oauth2.scope.length
-					return reject('Unauthorized access to #{oauth2.scope}')
-					
-				# create user
-				# otherwise check if user registered before (defined in model.User or not)
-				user = _.pick res.body.user, 'url', 'username', 'email'
-				sails.models.user
-					.findOrCreate user
-					.populateAll()
-					.then fulfill, reject
-			.catch reject
-			
-passport.use 'bearer', new bearer.Strategy {}, (token, done) ->
-	fulfill = (user) ->
-		user.token = token
-		done(null, user)
-	reject = (err) ->
-		done(null, false, message: err)
-	verifyToken(token).then fulfill, reject
-	
 module.exports = (req, res, next) ->
-	middleware = passport.authenticate('bearer', { session: false })
-	middleware req, res, ->
-		next()
+  middleware = passport.authenticate('bearer', { session: false } )
+  middleware req, res, ->
+    next()

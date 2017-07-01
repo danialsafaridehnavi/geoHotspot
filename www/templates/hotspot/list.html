@@ -7,40 +7,16 @@
 	</ion-nav-buttons>
 	<ion-content>
 		<ion-list>
-			<!--<label class="item item-input">
-			    <i class="icon ion-search placeholder-icon"></i>
-			    <input type="text" placeholder="Search" ng-keyup="search($event)">
-			</label>-->
-		
-			<div class='row header-padding'>
-					<div class="col-md-4 cell-padding">
-						<span>Name</span>
-					</div>
-					<div class="col-md-2 cell-padding">
-						<span>Latitude</span>
-					</div>
-					<div class="col-md-2 cell-padding">
-						<span>Longitude</span>
-					</div>
-					<div class="col-md-4 cell-padding">
-						<span>Address</span>
-					</div>
-			</div>
-			
+			<ion-item>				
+				<p>Name<p>
+				<p>Latitude / Longitude</p>
+				<p>Address</p>
+			</ion-item>
 			<ion-item ng-repeat="model in collection.models" on-tap="read('{{model.id}}');">				
-				<div class='row'>
-					<div class="col-md-4 nowrap">
-						<span>{{model.name}}</span>
-					</div>
-					<div class="col-md-2 nowrap">
-						<span>{{model.location.coordinates[1]}}</span>
-					</div>
-					<div class="col-md-2 nowrap">
-						<span>{{model.location.coordinates[0]}}</span> 
-					</div>
-					<div class="col-md-4 nowrap">
-						<span>{{model.address}}</span> 
-					</div>
+				<div class='nowrap'>
+					<h3>{{model.name}}</h3>
+					<p>{{model.location.coordinates[1]}} / <span>{{model.location.coordinates[0]}}</p>
+					<p>{{model.address}}</p>
 				</div>
 				<ion-option-button class="button button-positive icon-left ion-edit" on-tap="$event.stopPropagation(); edit('{{model.id}}')">Edit</ion-option-button>
 				<ion-option-button class="button button-assertive icon-left ion-trash-b" on-tap="$event.stopPropagation(); delete(model)">Delete</ion-option-button>

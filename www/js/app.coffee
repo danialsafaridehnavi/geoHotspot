@@ -1,142 +1,110 @@
 env = require './env.coffee'
-gmu = require 'googlemaps-utils'
-geolib = require 'geolib'
+_ = require 'lodash'
+window._ = _
+require 'angular-google-maps'
+require 'angular-simple-logger'
+require './templates'
+require 'log_toast'
 
+opts =
+  enableHighAccracy: true
+  timeout: 10000
+  maximumAge: 60000
+Promise = require 'bluebird'
+currPos = require('promised-location')(opts, Promise)
 
-currentPosReady = ->
-	coords = env.map.coords
-	return new Promise (fulfill, reject) ->
-		options = 
-			timeout: 60000
-			enableHighAccuracy: true
-		watchID = undefined
-		
-		showLocation = (position) ->
-			fulfill
-				latitude: Number(Math.round(position.coords.latitude+'e6')+'e-6')
-				longitude: Number(Math.round(position.coords.longitude+'e6')+'e-6')
+angular
 
-		errorHandler = (err) ->
-			fulfill coords
-		
-		if navigator.geolocation
-			
-			watchID = navigator.geolocation.getCurrentPosition(showLocation, errorHandler, options)
-		else
-			fulfill coords
+  .module 'starter', [
+    'ionic'
+    'uiGmapgoogle-maps'
+    'starter.controller'
+    'templates'
+    'logToast'
+  ]
 
-getMapSize = ->
-	mapHeight = env.mapSize.height
+  # ionic default settings
+  .config ($ionicConfigProvider) ->
+    $ionicConfigProvider.navBar.alignTitle 'left'
 
-	if screen.height < mapHeight
-		mapHeight = screen.height
-	
-	return {width: screen.width, height: mapHeight}
+  .config (uiGmapGoogleMapApiProvider) ->
+    uiGmapGoogleMapApiProvider.configure
+      key: env.map.key
+      libraries: 'places'
 
-angular.module 'starter', ['ionic', 'starter.controller', 'starter.model', 'ngTagEditor', 'ActiveRecord', 'ngTouch', 'angular.filter', 'util.auth', 'uiGmapgoogle-maps']
+  .config ($urlRouterProvider) ->
+    $urlRouterProvider.otherwise '/map'
 
-	.run (authService) ->
-		authService.login env.oauth2.opts
-		
-	.run ($rootScope, platform, $ionicPlatform, $location, $http) ->
-		$ionicPlatform.ready ->
-			if (window.cordova && window.cordova.plugins.Keyboard)
-				cordova.plugins.Keyboard.hideKeyboardAccessoryBar(true)
-			if (window.StatusBar)
-				StatusBar.styleDefault()
-	.config (uiGmapGoogleMapApiProvider) ->
-		uiGmapGoogleMapApiProvider.configure
-			v:	'3.20'
-			libraries:	'weather,geometry,visualization'
-								
-	.config ($stateProvider, $urlRouterProvider) ->
-		$stateProvider.state 'app',
-			url: ""
-			abstract: true
-			templateUrl: "templates/menu.html"
+  .run ($rootScope, $ionicPlatform, $location, $http) ->
+    $ionicPlatform.ready ->
+      if (window.cordova && window.cordova.plugins.Keyboard)
+        cordova.plugins.Keyboard.hideKeyboardAccessoryBar(true)
+      if (window.StatusBar)
+        StatusBar.styleDefault()
 
-		$stateProvider.state 'app.hotspot',
-			url: "/hotspot"
-			cache: false
-			views:
-				'menuContent':
-					templateUrl: "templates/hotspot/list.html"
-					controller: 'HotspotListCtrl'
-			resolve:
-				cliModel: 'model'
-				collection: (cliModel) ->
-					ret = new cliModel.HotspotList()
-					ret.$fetch({params: {sort: 'name ASC'}})
-		
-		$stateProvider.state 'app.map',
-			url: "/map"
-			cache: false
-			views:
-				'menuContent':
-					templateUrl: "templates/hotspot/map.html"
-					controller: 'geoCtrl'
-			resolve:
-				cliModel: 'model'
-				coords: () ->
-					currentPosReady()
-						.then (pos) ->
-							ret = pos
-				distance: (coords) ->
-					mapSize = getMapSize()
-					bounds = gmu.calcBounds(coords.latitude, coords.longitude, env.map.zoom, mapSize.width, mapSize.height)
-					ret = geolib.getDistance(coords, {latitude: bounds.bottom, longitude: bounds.left})
-					
-				collection: (cliModel, coords, distance) ->
-					ret = new cliModel.MapList()
-					ret.$fetch({params: {longitude: coords.longitude, latitude: coords.latitude, distance: distance/1000 }})
+  .config ($stateProvider) ->
 
-		$stateProvider.state 'app.readHotspot',
-			url: "/hotspot/read/:id"
-			cache: false
-			views:
-				'menuContent':
-					templateUrl: "templates/hotspot/read.html"
-					controller: 'HotspotCtrl'
-			resolve:
-				id: ($stateParams) ->
-					$stateParams.id
-				cliModel: 'model'
-				model: (cliModel, id) ->
-					ret = new cliModel.Hotspot({id: id})
-					ret.$fetch()
+    $stateProvider.state 'app',
+      url: ""
+      abstract: true
+      templateUrl: "templates/menu.html"
 
+    $stateProvider.state 'app.hotspot',
+      url: "/hotspot"
+      cache: false
+      views:
+        'menuContent':
+          templateUrl: "templates/hotspot/list.html"
+          controller: 'HotspotListCtrl'
+      resolve:
+        cliModel: 'model'
+        collection: (cliModel) ->
+          ret = new cliModel.HotspotList()
+          ret.$fetch({params: {sort: 'name ASC'} } )
 
-		$stateProvider.state 'app.createHotspot',
-			url: "/hotspot/create"
-			cache: false
-			views:
-				'menuContent':
-					templateUrl: "templates/hotspot/create.html"
-					#controller: "createHotspotCtrl"
-					controller: 'HotspotCtrl'
-			resolve:
-				cliModel: 'model'	
-				model: (cliModel) ->
-					ret = new cliModel.Hotspot()
+    $stateProvider.state 'app.map',
+      url: "/map"
+      cache: false
+      views:
+        'menuContent':
+          templateUrl: "templates/hotspot/map.html"
+          controller: 'MapCtrl'
+      resolve:
+        pos: ($log) ->
+          currPos
+            .then (pos) ->
+              pos.coords
+            .catch (err) ->
+              env.map.pos
 
-	
-		$stateProvider.state 'app.editHotspot',
-			url: "/hotspot/edit/:id"
-			cache: false
-			views:
-				'menuContent':
-					templateUrl: "templates/hotspot/edit.html"
-					controller: 'HotspotCtrl'
-			resolve:
-				id: ($stateParams) ->
-					$stateParams.id
-				cliModel: 'model'	
-				model: (cliModel, id) ->
-					ret = new cliModel.Hotspot({id: id})
-					ret.$fetch()
-						.then () ->
-							ret.origTagID = _.map ret.tags, (tag) ->
-								tag.id
-							return ret
+    $stateProvider.state 'app.createHotspot',
+      url: "/hotspot/create"
+      cache: false
+      views:
+        'menuContent':
+          templateUrl: "templates/hotspot/create.html"
+          #controller: "createHotspotCtrl"
+          controller: 'HotspotCtrl'
+      resolve:
+        cliModel: 'model'
+        model: (cliModel) ->
+          ret = new cliModel.Hotspot()
 
-		$urlRouterProvider.otherwise('/hotspot')
+    $stateProvider.state 'app.editHotspot',
+      url: "/hotspot/edit/:id"
+      cache: false
+      views:
+        'menuContent':
+          templateUrl: "templates/hotspot/edit.html"
+          controller: 'HotspotCtrl'
+      resolve:
+        id: ($stateParams) ->
+          $stateParams.id
+        cliModel: 'model'
+        model: (cliModel, id) ->
+          ret = new cliModel.Hotspot({id: id} )
+          ret.$fetch()
+            .then () ->
+              ret.origTagID = _.map ret.tags, (tag) ->
+                tag.id
+              return ret
